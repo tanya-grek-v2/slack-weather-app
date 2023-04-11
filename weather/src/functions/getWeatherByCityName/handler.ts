@@ -7,62 +7,25 @@ import { IForecast } from '../../interfaces/IForecast';
 import schema from './schema';
 
 const getWeatherByCityName: ValidatedEventAPIGatewayProxyEvent<typeof schema> = async (event) => {
-  const { text } = new Proxy(new URLSearchParams(event.body), {
-    get: (searchParams, prop) => searchParams.get(prop),
-  });
+  const location = String(event.body).split('location=')[1]
 
-  if (!text) {
+  if (!location) {
     return formatJSONResponse({
-      'blocks': [
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': 'Please, provide any location'
-          }
-        }
-      ]
+      error: 'Please, provide any location'
     }, 400);
   }
 
   try {
-    const weather: IForecast = await getForecast(text);
+    const weather: IForecast = await getForecast(location);
 
     return formatJSONResponse({
-      'blocks': [
-        {
-          'type': 'header',
-          'text': {
-            'type': 'plain_text',
-            'text': `${weather.request.query}`,
-            'emoji': true
-          }
-        },
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': `${weather.current.weather_descriptions.join('. ')}`
-          },
-          'accessory': {
-            'type': 'image',
-            'image_url': `${weather.current.weather_icons[0]}`,
-            'alt_text': 'weather icon'
-          }
-        }
-      ]
+      location: weather.request.query,
+      weather: weather.current.weather_descriptions.join('. '),
+      image: weather.current.weather_icons[0],
     })
   } catch {
     return formatJSONResponse({
-      'blocks': [
-        {
-          'type': 'section',
-          'text': {
-            'type': 'mrkdwn',
-            'text': `Sorry, I don't understand where ${text} is`
-          }
-        }
-      ]
+      error: `Sorry, I don't understand where ${location} is`
     }, 400);
   }
 };
